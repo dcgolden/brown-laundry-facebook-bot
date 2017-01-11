@@ -4,6 +4,11 @@ const url = require('url');
 const qs = require('querystring');
 const request = require('request');
 const crypto = require('crypto');
+ 
+ var sortNumber = function (a,b) {
+    return a - b;
+ }
+
 
 module.exports = {
 
@@ -351,7 +356,7 @@ default:
         })
 
     },
-
+ 
     parseLaundry: function(laundryObject) {
         console.log("preParse " + JSON.stringify(laundryObject));
         console.log("type " + typeof(laundryObject));
@@ -367,7 +372,8 @@ default:
                 dryerOpen.push(information.results[i].id);
         }
        
-       return "Washers " + laundryOpen.sort() + " are available. Dryers " + dryerOpen.sort() + " are available.";
+       return "Washers " + laundryOpen.sort(sortNumber) + " are available. Dryers " + dryerOpen.sort(sortNumber) + " are available.";
         
     }
+   
 };
