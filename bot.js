@@ -36,12 +36,12 @@ bot.on('message', (payload, reply) => {
       
       if((payload.message.text+payload.timestamp)!=lastMessage){ // check for duplicate messages
       
-        reply({ text }, (err) => {
-          if (err) console.log(err);
+       // reply({ text }, (err) => {
+         // if (err) console.log(err);
           
-          if(profile)
-            console.log(`Echoed back to ${profile.first_name} ${profile.last_name}: ${text}`);
-        });
+          //if(profile)
+            //console.log(`Echoed back to ${profile.first_name} ${profile.last_name}: ${text}`);
+        //});
         
         var dormId = dormData.getDorm(inputConst);
         console.log ("dormId" + " " + dormId);
@@ -56,6 +56,13 @@ bot.on('message', (payload, reply) => {
         });
         })
           
+        }
+        else
+        {
+          text = "Sorry, I don't know that dorm! Try spelling it differently or being more exact especially if you live in a dorm with multiple laundry rooms (e.g. Goodard House Rooom 18) "
+           reply({ text }, (err) => {
+          if (err) console.log(err);
+        });
         }
 
         lastMessage=payload.message.text+payload.timestamp;  
@@ -87,11 +94,11 @@ app.post('/bot', (req, res) => {
 
 // Finally, we set up the route for GETs to `/`, which is the root URL of our app, and is how we
 // render the contents of `messengerButton` to the page.
-app.get('/', function(req, res) {
+/*app.get('/', function(req, res) {
   res.writeHead(200, {'Content-Type': 'text/html'});
   res.write(messengerButton);
   res.end();
-});
+});*/
 
 // Set Express to listen out for HTTP requests
 var server = app.listen(process.env.PORT || 3000, function () {
