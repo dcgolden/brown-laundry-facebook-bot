@@ -59,7 +59,7 @@ bot.on('message', (payload, reply) => {
         }
         else
         {
-          text = "Sorry, I don't know that dorm! Try being more exact especially if you live in a dorm with multiple laundry rooms (e.g. Goddard House Rooom 18)"
+          text = "Sorry, I don't know that dorm! Try being more exact especially if you live in a dorm with multiple laundry rooms (e.g. Goddard House Room 18)"
            reply({ text }, (err) => {
           if (err) console.log(err);
         });
