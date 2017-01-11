@@ -105,17 +105,17 @@ case "everett-poland room 166" :
 case "everett poland room 166" :
 	return 1429267;
 
-case "goodard house rm018" :
-case "goodard house 18" :
-case "goodard house room 18" :
-case "goodard room 18" :
+case "goddard house rm018" :
+case "goddard house 18" :
+case "goddard house room 18" :
+case "goddard room 18" :
 	return 142928;
 
-case "goodard house rm130" :
-case "goodard house 130" :
-case "goodard house rm130" :
-case "goodard house room 130" :
-case "goodard room 130" :
+case "goddard house rm130" :
+case "goddard house 130" :
+case "goddard house 130" :
+case "goddard house room 130" :
+case "goddard room 130" :
 	return 142922;
 
 case "grad center a":
