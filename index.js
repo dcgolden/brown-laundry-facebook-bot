@@ -20,6 +20,7 @@ class Bot extends EventEmitter {
     this.token = opts.token
     this.app_secret = opts.app_secret || false
     this.verify_token = opts.verify || false
+    this.debug = opts.debug || false
   }
 
   getProfile (id, cb) {
@@ -28,10 +29,7 @@ class Bot extends EventEmitter {
     request({
       method: 'GET',
       uri: `https://graph.facebook.com/v2.6/${id}`,
-      qs: {
-        fields: 'first_name,last_name,profile_pic,locale,timezone,gender',
-        access_token: this.token
-      },
+      qs: this._getQs({fields: 'first_name,last_name,profile_pic,locale,timezone,gender'}),
       json: true
     }, (err, res, body) => {
       if (err) return cb(err)
@@ -40,33 +38,14 @@ class Bot extends EventEmitter {
       cb(null, body)
     })
   }
-  
-   getLaundryInformation (id, cb) {
-    if (!cb) cb = Function.prototype
-
-    request({
-      method: 'GET',
-      uri: `https://api.students.brown.edu/laundry/rooms/1429235/machines?client_id=${process.env.BROWN_API}`,
-      json: true
-    }, (err, res, body) => {
-      if (err) return cb(err)
-      if (body.error) return cb(body.error)
-
-      cb(null, body)
-    })
-  }
-  
 
   sendMessage (recipient, payload, cb) {
     if (!cb) cb = Function.prototype
-    console.log('payload %j ', payload);
 
     request({
       method: 'POST',
       uri: 'https://graph.facebook.com/v2.6/me/messages',
-      qs: {
-        access_token: this.token
-      },
+      qs: this._getQs(),
       json: {
         recipient: { id: recipient },
         message: payload
@@ -77,6 +56,90 @@ class Bot extends EventEmitter {
 
       cb(null, body)
     })
+  }
+
+  sendSenderAction (recipient, senderAction, cb) {
+    if (!cb) cb = Function.prototype
+
+    request({
+      method: 'POST',
+      uri: 'https://graph.facebook.com/v2.6/me/messages',
+      qs: this._getQs(),
+      json: {
+        recipient: {
+          id: recipient
+        },
+        sender_action: senderAction
+      }
+    }, (err, res, body) => {
+      if (err) return cb(err)
+      if (body.error) return cb(body.error)
+
+      cb(null, body)
+    })
+  }
+
+  setThreadSettings (threadState, callToActions, cb) {
+    if (!cb) cb = Function.prototype
+
+    request({
+      method: 'POST',
+      uri: 'https://graph.facebook.com/v2.6/me/thread_settings',
+      qs: this._getQs(),
+      json: {
+        setting_type: 'call_to_actions',
+        thread_state: threadState,
+        call_to_actions: callToActions
+      }
+    }, (err, res, body) => {
+      if (err) return cb(err)
+      if (body.error) return cb(body.error)
+
+      cb(null, body)
+    })
+  }
+
+  removeThreadSettings (threadState, cb) {
+    if (!cb) cb = Function.prototype
+
+    request({
+      method: 'DELETE',
+      uri: 'https://graph.facebook.com/v2.6/me/thread_settings',
+      qs: this._getQs(),
+      json: {
+        setting_type: 'call_to_actions',
+        thread_state: threadState
+      }
+    }, (err, res, body) => {
+      if (err) return cb(err)
+      if (body.error) return cb(body.error)
+
+      cb(null, body)
+    })
+  }
+
+  setGetStartedButton (payload, cb) {
+    if (!cb) cb = Function.prototype
+
+    return this.setThreadSettings('new_thread', payload, cb)
+  }
+
+  setPersistentMenu (payload, cb) {
+    if (!cb) cb = Function.prototype
+
+    return this.setThreadSettings('existing_thread', payload, cb)
+  }
+
+  removeGetStartedButton (cb) {
+    if (!cb) cb = Function.prototype
+
+    return this.removeThreadSettings('new_thread', cb)
+  }
+
+  removePersistentMenu (cb) {
+    if (!cb) cb = Function.prototype
+
+    return this.removeThreadSettings('existing_thread', cb)
   }
 
   middleware () {
@@ -113,6 +176,19 @@ class Bot extends EventEmitter {
     }
   }
 
+  _getQs (qs) {
+    if (typeof qs === 'undefined') {
+      qs = {}
+    }
+    qs['access_token'] = this.token
+
+    if (this.debug) {
+      qs['debug'] = this.debug
+    }
+
+    return qs
+  }
+
   _handleMessage (json) {
     let entries = json.entry
 
@@ -120,9 +196,13 @@ class Bot extends EventEmitter {
       let events = entry.messaging
 
       events.forEach((event) => {
-        // handle inbound messages
+        // handle inbound messages and echos
         if (event.message) {
-          this._handleEvent('message', event)
+          if (event.message.is_echo) {
+            this._handleEvent('echo', event)
+          } else {
+            this._handleEvent('message', event)
+          }
         }
 
         // handle postbacks
@@ -135,12 +215,36 @@ class Bot extends EventEmitter {
           this._handleEvent('delivery', event)
         }
 
+        // handle message read
+        if (event.read) {
+          this._handleEvent('read', event)
+        }
+
         // handle authentication
         if (event.optin) {
           this._handleEvent('authentication', event)
         }
+
+        // handle account_linking
+        if (event.account_linking && event.account_linking.status) {
+          if (event.account_linking.status === 'linked') {
+            this._handleEvent('accountLinked', event)
+          } else if (event.account_linking.status === 'unlinked') {
+            this._handleEvent('accountUnlinked', event)
+          }
+        }
       })
     })
+  }
+
+  _getActionsObject (event) {
+    return {
+      setTyping: (typingState, cb) => {
+        let senderTypingAction = typingState ? 'typing_on' : 'typing_off'
+        this.sendSenderAction(event.sender.id, senderTypingAction, cb)
+      },
+      markRead: this.sendSenderAction.bind(this, event.sender.id, 'mark_seen')
+    }
   }
 
   _verify (req, res) {
@@ -154,7 +258,7 @@ class Bot extends EventEmitter {
   }
 
   _handleEvent (type, event) {
-    this.emit(type, event, this.sendMessage.bind(this, event.sender.id))
+    this.emit(type, event, this.sendMessage.bind(this, event.sender.id), this._getActionsObject(event))
   }
 }
 
